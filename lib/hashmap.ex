@@ -62,6 +62,22 @@ defmodule HashMap do
     %HashMap{buckets: buckets, size: hm.size}
   end
 
+  def map(hm, function) do
+    List.flatten(hm.buckets)
+      |> Enum.map(function)
+  end
+
+  def foldl(hm, acc, function) do
+    List.flatten(hm.buckets)
+      |> Enum.reduce(acc, function)
+  end
+
+  def foldr(hm, acc, function) do
+    List.flatten(hm.buckets)
+      |> Enum.reverse
+      |> Enum.reduce(acc, function)
+  end
+
   defp get_bucket_index(hm, key) do
     rem(hash(key), hm.size)
   end
