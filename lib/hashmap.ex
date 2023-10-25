@@ -10,6 +10,7 @@ defmodule HashMap do
 
   def add(hm, key, value) do
     bucket_index = get_bucket_index(hm, key)
+
     key_index =
       hm.buckets
       |> Enum.at(bucket_index)
@@ -17,11 +18,12 @@ defmodule HashMap do
 
     buckets =
       hm.buckets
-      |> List.update_at(bucket_index,
+      |> List.update_at(
+        bucket_index,
         fn b ->
           case key_index do
-            nil ->  [ {key, value} | b ]
-            _   ->  List.keystore(b, key, key_index, {key, value})
+            nil -> [{key, value} | b]
+            _ -> List.keystore(b, key, key_index, {key, value})
           end
         end
       )
@@ -31,10 +33,12 @@ defmodule HashMap do
 
   def get(hm, key) do
     bucket_index = get_bucket_index(hm, key)
+
     tuple =
       hm.buckets
       |> Enum.at(bucket_index)
       |> List.keyfind(key, 0)
+
     case tuple do
       nil -> nil
       tpl -> elem(tpl, 1)
@@ -43,6 +47,7 @@ defmodule HashMap do
 
   def pop(hm, key) do
     bucket_index = get_bucket_index(hm, key)
+
     key_index =
       hm.buckets
       |> Enum.at(bucket_index)
@@ -50,7 +55,8 @@ defmodule HashMap do
 
     buckets =
       hm.buckets
-      |> List.update_at(bucket_index,
+      |> List.update_at(
+        bucket_index,
         fn b ->
           case key_index do
             nil -> b
@@ -64,24 +70,25 @@ defmodule HashMap do
 
   def map(hm, function) do
     List.flatten(hm.buckets)
-      |> Enum.map(function)
+    |> Enum.map(function)
   end
 
   def foldl(hm, acc, function) do
     List.flatten(hm.buckets)
-      |> Enum.reduce(acc, function)
+    |> Enum.reduce(acc, function)
   end
 
   def foldr(hm, acc, function) do
     List.flatten(hm.buckets)
-      |> Enum.reverse
-      |> Enum.reduce(acc, function)
+    |> Enum.reverse()
+    |> Enum.reduce(acc, function)
   end
 
   def filter(hm, function) do
     filtered_buckets =
       hm.buckets
       |> Enum.map(fn bucket -> Enum.filter(bucket, function) end)
+
     %HashMap{buckets: filtered_buckets, size: hm.size}
   end
 
