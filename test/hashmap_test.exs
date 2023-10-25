@@ -67,4 +67,14 @@ defmodule HashMapTest do
     result = HashMap.foldr(hm, {1, 0}, fn {key1, value1}, {key2, value2} -> {key1 * key2, value1 - value2} end)
     assert result == {6, 12}
   end
+
+  test "Test filter" do
+    hm = HashMap.new(2)
+      |> HashMap.add(1, 1)
+      |> HashMap.add(2, 4)
+      |> HashMap.add(3, 9)
+
+    result = HashMap.filter(hm, fn {k, _v} -> rem(k, 2) == 1 end)
+    assert result == HashMap.pop(hm, 2)
+  end
 end

@@ -78,6 +78,13 @@ defmodule HashMap do
       |> Enum.reduce(acc, function)
   end
 
+  def filter(hm, function) do
+    filtered_buckets =
+      hm.buckets
+      |> Enum.map(fn bucket -> Enum.filter(bucket, function) end)
+    %HashMap{buckets: filtered_buckets, size: hm.size}
+  end
+
   defp get_bucket_index(hm, key) do
     rem(hash(key), hm.size)
   end
