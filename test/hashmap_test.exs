@@ -1,99 +1,249 @@
 defmodule HashMapTest do
   use ExUnit.Case
+  use ExUnitProperties
 
-  test "Test get by key" do
-    hm =
+  test "initialize empty map" do
+    buckets_count = HashMap.default_buckets_count()
+
+    assert %HashMap{buckets: [], buckets_count: ^buckets_count} = HashMap.new()
+    assert %HashMap{buckets: [], buckets_count: 2} = HashMap.new(2)
+  end
+
+  test "raises when trying to initialize map with invalid buckets_count" do
+    assert_raise FunctionClauseError, fn -> HashMap.new(0) end
+  end
+
+  test "put and get from has map" do
+    hash_map = HashMap.new()
+
+    refute HashMap.get(hash_map, "not_exists")
+
+    hash_map =
+      hash_map
+      |> HashMap.put("some_key", 1)
+      |> HashMap.put("some_key_2", 2)
+      |> HashMap.put("some_key_2", 3)
+
+    assert HashMap.get(hash_map, "some_key") == 1
+    assert HashMap.get(hash_map, "some_key_2") == 3
+  end
+
+  test "remove/2" do
+    empty_hash_map = HashMap.new()
+
+    hash_map =
+      empty_hash_map
+      |> HashMap.put("key1", "value 1")
+      |> HashMap.put("key2", "value 2")
+      |> HashMap.remove("key1")
+
+    refute HashMap.get(hash_map, "key1")
+    assert HashMap.get(hash_map, "key2") == "value 2"
+  end
+
+  test "map/2" do
+    hash_map =
       HashMap.new()
-      |> HashMap.add("key1", "value1")
-      |> HashMap.add("key2", "value2")
-      |> HashMap.add("key3", "value3")
+      |> HashMap.put("key1", "value1")
+      |> HashMap.put("key2", "value2")
+      |> HashMap.put("key3", "value3")
+      |> HashMap.map(fn {_key, value} -> value <> "!" end)
 
-    assert HashMap.get(hm, "key2") == "value2"
+    assert HashMap.get(hash_map, "key1") == "value1!"
+    assert HashMap.get(hash_map, "key2") == "value2!"
+    assert HashMap.get(hash_map, "key3") == "value3!"
   end
 
-  test "Test get by undeclared key" do
-    hm =
+  test "filter/2" do
+    hash_map =
       HashMap.new()
-      |> HashMap.add("key1", "value1")
+      |> HashMap.put(1, 1)
+      |> HashMap.put(2, 4)
+      |> HashMap.put(3, 9)
+      |> HashMap.filter(fn {_k, v} -> rem(v, 2) == 1 end)
 
-    assert HashMap.get(hm, "key2") == nil
+    assert HashMap.get(hash_map, 1) == 1
+    refute HashMap.get(hash_map, 2)
+    assert HashMap.get(hash_map, 3) == 9
   end
 
-  test "Test get by key with collision" do
-    hm =
-      HashMap.new(2)
-      |> HashMap.add("key1", "value1")
-      |> HashMap.add("key2", "value2")
-      |> HashMap.add("key3", "value3")
-
-    assert HashMap.get(hm, "key1") == "value1"
-    assert HashMap.get(hm, "key2") == "value2"
-    assert HashMap.get(hm, "key3") == "value3"
-  end
-
-  test "Test pop key" do
-    hm =
+  test "merge/2" do
+    left_hash_map =
       HashMap.new()
-      |> HashMap.add("key1", "value1")
+      |> HashMap.put("first_key", 1)
+      |> HashMap.put("second_key", 2)
 
-    assert HashMap.get(hm, "key1") == "value1"
+    right_hash_map =
+      HashMap.new()
+      |> HashMap.put("third_key", 3)
+      |> HashMap.put("first_key", -1)
 
-    hm =
-      hm
-      |> HashMap.pop("key1")
+    merged_hash_map = HashMap.merge(left_hash_map, right_hash_map)
 
-    assert HashMap.get(hm, "key1") == nil
+    assert HashMap.get(merged_hash_map, "first_key") == -1
+    assert HashMap.get(merged_hash_map, "second_key") == 2
+    assert HashMap.get(merged_hash_map, "third_key") == 3
   end
 
-  test "Test map" do
-    hm =
-      HashMap.new(2)
-      |> HashMap.add("key1", "value1")
-      |> HashMap.add("key2", "value2")
-      |> HashMap.add("key3", "value3")
+  test "collission resolves" do
+    hash_map =
+      1
+      |> HashMap.new()
+      |> HashMap.put("first_key", 1)
+      |> HashMap.put("second_key", 2)
 
-    result = HashMap.map(hm, fn {key, value} -> "#{key}_#{value}" end)
-    assert result == ["key3_value3", "key2_value2", "key1_value1"]
+    assert HashMap.get(hash_map, "first_key") == 1
+    assert HashMap.get(hash_map, "second_key") == 2
   end
 
-  test "Test foldl" do
-    hm =
-      HashMap.new(2)
-      |> HashMap.add(1, 1)
-      |> HashMap.add(2, 4)
-      |> HashMap.add(3, 9)
+  test "reduce/2 on empty hash map with nil acc" do
+    actual_value =
+      4
+      |> HashMap.new()
+      |> HashMap.reduce(fn {_key, value}, acc -> acc + value end)
 
-    result =
-      HashMap.foldl(hm, {1, 0}, fn {key1, value1}, {key2, value2} ->
-        {key1 * key2, value1 + value2}
-      end)
-
-    assert result == {6, 14}
+    refute actual_value
   end
 
-  test "Test foldr" do
-    hm =
-      HashMap.new(2)
-      |> HashMap.add(1, 1)
-      |> HashMap.add(2, 4)
-      |> HashMap.add(3, 9)
+  test "reduce/2 on empty hash map" do
+    expected_value = 0
 
-    result =
-      HashMap.foldr(hm, {1, 0}, fn {key1, value1}, {key2, value2} ->
-        {key1 * key2, value1 - value2}
-      end)
+    actual_value =
+      4
+      |> HashMap.new()
+      |> HashMap.reduce(0, fn {_key, value}, acc -> acc + value end)
 
-    assert result == {6, 12}
+    assert actual_value == expected_value
   end
 
-  test "Test filter" do
-    hm =
-      HashMap.new(2)
-      |> HashMap.add(1, 1)
-      |> HashMap.add(2, 4)
-      |> HashMap.add(3, 9)
+  test "reduce/2" do
+    expected_result = 15
 
-    result = HashMap.filter(hm, fn {k, _v} -> rem(k, 2) == 1 end)
-    assert result == HashMap.pop(hm, 2)
+    actual_result =
+      4
+      |> HashMap.new()
+      |> HashMap.put(1, 1)
+      |> HashMap.put(2, 2)
+      |> HashMap.put(3, 3)
+      |> HashMap.put(4, 4)
+      |> HashMap.put(5, 5)
+      |> HashMap.reduce(0, fn {_key, value}, acc -> acc + value end)
+
+    assert actual_result == expected_result
+  end
+
+  test "equal?/2 negative" do
+    first_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(1, 1)
+
+    second_hash_map =
+      1
+      |> HashMap.new()
+      |> HashMap.put(1, 1)
+
+    refute HashMap.equal?(first_hash_map, second_hash_map)
+
+    first_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(1, 1)
+
+    second_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(1, 2)
+
+    refute HashMap.equal?(first_hash_map, second_hash_map)
+
+    first_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(1, 1)
+
+    second_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(2, 1)
+
+    refute HashMap.equal?(first_hash_map, second_hash_map)
+  end
+
+  test "equal/2 positive" do
+    first_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(0, 1)
+      |> HashMap.put(2, 3)
+      |> HashMap.put(3, 4)
+
+    second_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(3, 4)
+      |> HashMap.put(0, 1)
+      |> HashMap.put(2, 3)
+
+    assert HashMap.equal?(first_hash_map, second_hash_map)
+
+    first_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(0, 1)
+      |> HashMap.put(2, 3)
+      |> HashMap.remove(3)
+
+    second_hash_map =
+      4
+      |> HashMap.new()
+      |> HashMap.put(0, 1)
+      |> HashMap.put(2, 3)
+
+    assert HashMap.equal?(first_hash_map, second_hash_map)
+  end
+
+  test "neutral element" do
+    check all %HashMap{buckets_count: count} = hash_map <- valid_hash_map_generator() do
+      empty_hash_map = HashMap.new(count)
+
+      merged_hash_map = HashMap.merge(hash_map, empty_hash_map)
+
+      assert HashMap.equal?(merged_hash_map, hash_map)
+      assert HashMap.equal?(hash_map, merged_hash_map)
+
+      merged_hash_map = HashMap.merge(empty_hash_map, hash_map)
+
+      assert HashMap.equal?(merged_hash_map, hash_map)
+      assert HashMap.equal?(hash_map, merged_hash_map)
+    end
+  end
+
+  test "put is associative" do
+    check all {first_hash_map, second_hash_map} <- valid_hash_map_pair_generator() do
+      assert HashMap.equal?(first_hash_map, second_hash_map)
+    end
+  end
+
+  defp valid_hash_map_generator do
+    gen all buckets_count <- integer(1..32),
+            list <- list_of({integer(), integer()}) do
+      put_elements(buckets_count, list)
+    end
+  end
+
+  defp valid_hash_map_pair_generator do
+    gen all buckets_count <- integer(1..32),
+            list <- uniq_list_of({integer(), integer()}, uniq_fun: fn {key, _} -> key end) do
+      shuffled_list = Enum.shuffle(list)
+
+      {put_elements(buckets_count, list), put_elements(buckets_count, shuffled_list)}
+    end
+  end
+
+  defp put_elements(buckets_count, elements) do
+    Enum.reduce(elements, HashMap.new(buckets_count), fn {key, value}, acc ->
+      HashMap.put(acc, key, value)
+    end)
   end
 end
