@@ -112,10 +112,12 @@ defmodule HashMap do
   # Функция без тела нужна для объявления значения по умолчанию
   defp put_bucket_value(buckets, hash, key, value, acc \\ [])
 
+  # Если не нашли бакет с таким хэшем, вставляем его в нашу хэшмапу
   defp put_bucket_value([], hash, key, value, acc) do
     [{hash, [{key, value}]} | acc]
   end
 
+  # Если нашли бакет с таким хэшем, вставляем в него наш элемент
   defp put_bucket_value([{current_hash, items} | tail], hash, key, value, acc)
        when current_hash == hash do
     [{current_hash, put_value(items, key, value)} | acc] ++ tail
@@ -127,20 +129,14 @@ defmodule HashMap do
 
   defp put_value(items, key, value, acc \\ [])
 
+  # Вставляем значение в начало списка, если ключ не был найден
   defp put_value([], key, value, acc) do
-    # If no more items in hashmap we just prepend first pair (2 element tuple)
-    # in our items list. Also as we don't need to keep order of items in hashmap
-    # we can just return list of our items
     [{key, value} | acc]
   end
 
-  # We can tell compiler to ignore some value when prefixing it with underscore
+  # Если мы нашли ключ, то заменяем элемент новым значением
   defp put_value([{current_key, _} = head | tail], key, value, acc) do
     if current_key == key do
-      # See comment above for items ordering in a hashmap. Because of this
-      # on key found we can simple update it's value and return accumulated list
-      # (with prepended pair) concateneded (costly function ++/2) with not traversed
-      # items
       tail ++ [{key, value} | acc]
     else
       put_value(tail, key, value, [head | acc])
@@ -157,14 +153,10 @@ defmodule HashMap do
     get_bucket_value(tail, hash, key)
   end
 
-  # Either there were no elements in the list either we traversed them all.
-  # As no key found then just return nil
   defp get_value([], _key), do: nil
 
-  # When the head of list is the element we searching for. Return value of key
   defp get_value([{current_key, value} | _tail], key) when current_key == key, do: value
 
-  # Otherwise just traverse tail of list
   defp get_value([_ | tail], key), do: get_value(tail, key)
 
   defp remove_bucket_key(buckets, hash, key, acc \\ [])
@@ -180,18 +172,12 @@ defmodule HashMap do
     remove_bucket_key(tail, hash, key, [head | acc])
   end
 
-  # Accumulate elements except one with specified key
   defp remove_key(items, key, acc \\ [])
 
-  # Either we traversed all elements either there were no element in hash_map. Just return currently
-  # accumulated elements
   defp remove_key([], _key, acc), do: acc
 
-  # When the head of list is the element we searching for. Just return concateneted
-  # currently accumulated elements with rest of the elements
   defp remove_key([{current_key, _} | tail], key, acc) when current_key == key, do: tail ++ acc
 
-  # Otherwise just prepend head of the list to accumulated elements and travese further
   defp remove_key([head | tail], key, acc), do: remove_key(tail, key, [head | acc])
 
   defp map_buckets(buckets, function, acc \\ [])
@@ -299,6 +285,8 @@ defmodule HashMap do
     has_bucket_with_items?(tail, hash, items)
   end
 
+  # Списки равны, если все элементы первого содержатся во втором
+  # и все элементы второго содержатся в первом
   defp lists_equal?(first, second) do
     list_includes?(first, second) and list_includes?(second, first)
   end
