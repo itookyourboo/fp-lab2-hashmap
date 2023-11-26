@@ -22,12 +22,10 @@ defmodule HashMapPropertyTest do
     check all hm1 <- valid_hash_map_generator(),
               hm2 <- valid_hash_map_generator(),
               hm3 <- valid_hash_map_generator() do
-
       assert HashMap.equal?(
-        HashMap.merge(HashMap.merge(hm1, hm2), hm3),
-        HashMap.merge(hm1, HashMap.merge(hm2, hm3))
-      )
-
+               HashMap.merge(HashMap.merge(hm1, hm2), hm3),
+               HashMap.merge(hm1, HashMap.merge(hm2, hm3))
+             )
     end
   end
 
