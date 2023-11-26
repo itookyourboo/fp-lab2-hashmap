@@ -61,7 +61,7 @@ jobs:
         path: |
           priv/plts
     - name: Run tests
-      run: mix test
+      run: mix test --trace
     - name: Run formatter
       run: mix format --check-formatted
     - name: Run dialyzer

@@ -1,6 +1,5 @@
-defmodule HashMapTest do
+defmodule HashMapUnitTest do
   use ExUnit.Case
-  use ExUnitProperties
 
   test "initialize empty map" do
     buckets_count = HashMap.default_buckets_count()
@@ -80,6 +79,25 @@ defmodule HashMapTest do
 
     merged_hash_map = HashMap.merge(left_hash_map, right_hash_map)
 
+    assert HashMap.get(merged_hash_map, "first_key") == -1
+    assert HashMap.get(merged_hash_map, "second_key") == 2
+    assert HashMap.get(merged_hash_map, "third_key") == 3
+  end
+
+  test "merge/2 different size" do
+    left_hash_map =
+      HashMap.new(32)
+      |> HashMap.put("first_key", 1)
+      |> HashMap.put("second_key", 2)
+
+    right_hash_map =
+      HashMap.new(2)
+      |> HashMap.put("third_key", 3)
+      |> HashMap.put("first_key", -1)
+
+    merged_hash_map = HashMap.merge(left_hash_map, right_hash_map)
+
+    assert merged_hash_map.buckets_count == left_hash_map.buckets_count
     assert HashMap.get(merged_hash_map, "first_key") == -1
     assert HashMap.get(merged_hash_map, "second_key") == 2
     assert HashMap.get(merged_hash_map, "third_key") == 3
@@ -201,49 +219,5 @@ defmodule HashMapTest do
       |> HashMap.put(2, 3)
 
     assert HashMap.equal?(first_hash_map, second_hash_map)
-  end
-
-  test "neutral element" do
-    check all %HashMap{buckets_count: count} = hash_map <- valid_hash_map_generator() do
-      empty_hash_map = HashMap.new(count)
-
-      merged_hash_map = HashMap.merge(hash_map, empty_hash_map)
-
-      assert HashMap.equal?(merged_hash_map, hash_map)
-      assert HashMap.equal?(hash_map, merged_hash_map)
-
-      merged_hash_map = HashMap.merge(empty_hash_map, hash_map)
-
-      assert HashMap.equal?(merged_hash_map, hash_map)
-      assert HashMap.equal?(hash_map, merged_hash_map)
-    end
-  end
-
-  test "put is associative" do
-    check all {first_hash_map, second_hash_map} <- valid_hash_map_pair_generator() do
-      assert HashMap.equal?(first_hash_map, second_hash_map)
-    end
-  end
-
-  defp valid_hash_map_generator do
-    gen all buckets_count <- integer(1..32),
-            list <- list_of({integer(), integer()}) do
-      put_elements(buckets_count, list)
-    end
-  end
-
-  defp valid_hash_map_pair_generator do
-    gen all buckets_count <- integer(1..32),
-            list <- uniq_list_of({integer(), integer()}, uniq_fun: fn {key, _} -> key end) do
-      shuffled_list = Enum.shuffle(list)
-
-      {put_elements(buckets_count, list), put_elements(buckets_count, shuffled_list)}
-    end
-  end
-
-  defp put_elements(buckets_count, elements) do
-    Enum.reduce(elements, HashMap.new(buckets_count), fn {key, value}, acc ->
-      HashMap.put(acc, key, value)
-    end)
   end
 end

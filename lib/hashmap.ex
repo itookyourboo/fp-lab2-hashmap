@@ -60,6 +60,7 @@ defmodule HashMap do
 
   # Операция слияния двух структур.
   # Одинаковые поля переписываются второй структурой
+  #
   @spec merge(left_hash_map :: t(), right_hash_map :: t()) :: t()
   def merge(
         %__MODULE__{buckets: left_buckets, buckets_count: left_buckets_count} = left_hash_map,
@@ -72,7 +73,30 @@ defmodule HashMap do
     struct(left_hash_map, buckets: merge_buckets(right_buckets, left_buckets))
   end
 
-  # Операция свертки по паре (ключ; значение)
+  def merge(
+        %__MODULE__{buckets_count: left_buckets_count} = left_hash_map,
+        %__MODULE__{buckets_count: right_buckets_count} = right_hash_map
+      )
+      when left_buckets_count < right_buckets_count do
+    merge(resize(left_hash_map, right_buckets_count), right_hash_map)
+  end
+
+  def merge(
+        %__MODULE__{buckets_count: left_buckets_count} = left_hash_map,
+        %__MODULE__{buckets_count: right_buckets_count} = right_hash_map
+      )
+      when left_buckets_count > right_buckets_count do
+    merge(left_hash_map, resize(right_hash_map, left_buckets_count))
+  end
+
+  @spec resize(hash_map :: t(), new_buckets_count :: non_neg_integer()) :: t()
+  def resize(hash_map, new_buckets_count) do
+    reduce(hash_map, HashMap.new(new_buckets_count), fn {key, value}, new_hash_map ->
+      HashMap.put(new_hash_map, key, value)
+    end)
+  end
+
+  # Операция свертки по паре (ключ; значение))
   def reduce(hash_map, function) do
     reduce(hash_map, nil, function)
   end
